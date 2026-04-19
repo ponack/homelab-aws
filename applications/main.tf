@@ -14,13 +14,7 @@ terraform {
       version = "~> 2.0"
     }
   }
-  backend "s3" {
-    bucket         = "homelab-tfstate"
-    key            = "applications/terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "homelab-tfstate-lock"
-    encrypt        = true
-  }
+  backend "local" {}
 }
 
 data "terraform_remote_state" "compute" {

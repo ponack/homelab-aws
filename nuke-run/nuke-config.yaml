@@ -1,0 +1,41 @@
+regions:
+  - us-east-1
+  - us-east-2
+  - us-west-1
+  - us-west-2
+  - eu-west-1
+  - eu-central-1
+  - global
+
+# Safety net — no other account can ever match this run
+blocklist: []
+
+accounts:
+  "767398073332":
+    filters:
+      # Preserve the role aws-nuke uses (self-preservation)
+      IAMRole:
+        - "aws-nuke-role"
+      IAMRolePolicyAttachment:
+        - "aws-nuke-role -> AdministratorAccess"
+
+      # Preserve OpenTofu state bucket and its contents
+      S3Bucket:
+        - "homelab-tfstate"
+      S3Object:
+        - property: Bucket
+          value: "homelab-tfstate"
+
+      # Preserve EC2 instances tagged to survive the nuke
+      EC2Instance:
+        - property: tag:crucible-nuke-protect
+          value: "true"
+      EC2Volume:
+        - property: tag:crucible-nuke-protect
+          value: "true"
+
+      # Preserve Crucible runner roles in the target account (if any)
+      # Add crucible-prep, crucible-nuke-setup here if you create them in this account:
+      # IAMRole:
+      #   - "crucible-nuke-setup"
+      #   - "crucible-prep"

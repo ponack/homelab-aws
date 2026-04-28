@@ -6,13 +6,7 @@ terraform {
       version = "~> 5.0"
     }
   }
-  backend "s3" {
-    bucket         = "homelab-tfstate"
-    key            = "compute/terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "homelab-tfstate-lock"
-    encrypt        = true
-  }
+  backend "local" {}
 }
 
 provider "aws" {

@@ -82,6 +82,27 @@ accounts:
         - property: tag:crucible-nuke-protect
           value: "true"
 
+      # Preserve AWS Control Tower baseline infrastructure deployed by the
+      # management account into this enrolled account. Nuking these would
+      # break Control Tower governance and require re-enrolling the account.
+      CloudFormationStack:
+        - type: regex
+          value: "StackSet-AWSControlTower.*"
+      LambdaFunction:
+        - type: regex
+          value: "aws-controltower-.*"
+      CloudWatchLogsLogGroup:
+        - type: regex
+          value: "/aws/lambda/aws-controltower-.*"
+      SNSTopic:
+        - type: regex
+          property: TopicARN
+          value: ".*:aws-controltower-.*"
+
+      # Preserve personal key pairs
+      EC2KeyPair:
+        - "ponack-audit"
+
       # Preserve Crucible runner roles in the target account (if any)
       # Add crucible-prep, crucible-nuke-setup here if you create them in this account:
       # IAMRole:

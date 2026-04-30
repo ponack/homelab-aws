@@ -63,10 +63,21 @@ accounts:
   "${target_account_id}":
     filters:
       # Preserve the role aws-nuke uses (self-preservation)
+      # and all AWS Control Tower IAM roles — these are managed by the
+      # management account and cannot be deleted from the enrolled account.
       IAMRole:
         - "aws-nuke-role"
+        - type: regex
+          value: "aws-controltower-.*"
+        - "AWSControlTowerExecution"
+        - type: regex
+          value: "AWSReservedSSO_.*"
       IAMRolePolicyAttachment:
         - "aws-nuke-role -> AdministratorAccess"
+        - type: regex
+          value: "aws-controltower-.* -> .*"
+        - type: regex
+          value: "AWSControlTowerExecution -> .*"
 
       # Preserve OpenTofu state bucket and its contents
       S3Bucket:

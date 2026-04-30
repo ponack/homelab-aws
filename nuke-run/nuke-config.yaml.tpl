@@ -62,11 +62,25 @@ bypass-alias-check-accounts:
 accounts:
   "${target_account_id}":
     filters:
-      # Preserve the role aws-nuke uses (self-preservation)
+      # Preserve the role aws-nuke uses (self-preservation), all AWS Control
+      # Tower IAM roles (managed by the management account, SCPs prevent
+      # deletion from enrolled accounts), and the Crucible setup role.
       IAMRole:
         - "aws-nuke-role"
+        - "AWSControlTowerExecution"
+        - "crucible-nuke-setup"
+        - type: glob
+          value: "aws-controltower-*"
+        - type: glob
+          value: "AWSReservedSSO_*"
       IAMRolePolicyAttachment:
         - "aws-nuke-role -> AdministratorAccess"
+        - type: glob
+          value: "aws-controltower-* -> *"
+        - type: glob
+          value: "AWSControlTowerExecution -> *"
+        - type: glob
+          value: "crucible-nuke-setup -> *"
 
       # Preserve OpenTofu state bucket and its contents
       S3Bucket:
@@ -84,8 +98,12 @@ accounts:
       EC2VPC:
         - property: tag:crucible-nuke-protect
           value: "true"
+        - property: IsDefault
+          value: "true"
       EC2Subnet:
         - property: tag:crucible-nuke-protect
+          value: "true"
+        - property: DefaultForAz
           value: "true"
       EC2SecurityGroup:
         - property: tag:crucible-nuke-protect
@@ -93,11 +111,17 @@ accounts:
       EC2InternetGateway:
         - property: tag:crucible-nuke-protect
           value: "true"
+        - property: DefaultVPC
+          value: "true"
       EC2RouteTable:
         - property: tag:crucible-nuke-protect
           value: "true"
+        - property: DefaultVPC
+          value: "true"
       EC2DHCPOption:
         - property: tag:crucible-nuke-protect
+          value: "true"
+        - property: DefaultVPC
           value: "true"
       EC2NetworkACL:
         - property: tag:crucible-nuke-protect

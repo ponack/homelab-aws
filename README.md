@@ -4,10 +4,10 @@ AWS homelab infrastructure managed with OpenTofu via [Crucible IAP](https://gith
 
 ## Accounts
 
-| Account | ID | Role |
-| ------- | -- | ---- |
-| Management | `303880639739` | Runs Crucible IAP and the nuke-run runner |
-| Target | `767398073332` | All resources; receives aws-nuke |
+| Account | Role |
+| ------- | ---- |
+| Management | Runs Crucible IAP and the nuke-run runner |
+| Target | All resources; receives aws-nuke |
 
 ## Stacks
 
@@ -16,7 +16,7 @@ AWS homelab infrastructure managed with OpenTofu via [Crucible IAP](https://gith
 | `networking/` | target | VPC, subnets, security groups, NAT gateway | — |
 | `compute/` | target | EKS cluster, node groups, IAM roles | `networking` |
 | `applications/` | target | Helm releases, ingress, cert-manager | `compute` |
-| `nuke/` | target | Creates `aws-nuke-role` IAM role (apply once) | — |
+| `nuke/` | target | Creates `aws-nuke-role` IAM role (apply once, then lock) | — |
 | `prep/` | target | Two test EC2s — one protected, one to be nuked | — |
 | `nuke-run/` | management | Runs aws-nuke against the target account — **destructive** | `nuke` |
 
@@ -25,8 +25,9 @@ AWS homelab infrastructure managed with OpenTofu via [Crucible IAP](https://gith
 ```text
 networking ──► compute ──► applications
 
-nuke ──► nuke-run
-prep ──► nuke-run  (logical; prep before testing live nuke)
+nuke (locked after first apply)
+
+prep ──► nuke-run
 ```
 
 Crucible IAP automatically triggers downstream stacks after a successful apply upstream.
@@ -38,32 +39,15 @@ the downstream relationships via the Dependencies tab on each stack.
 
 ## Nuking the account
 
-### Workflow
+See the full guide: [docs/nuke-workflow.md](docs/nuke-workflow.md)
 
-1. Apply `nuke/` once to create `aws-nuke-role` in the target account
-2. Apply `prep/` to create two test EC2 instances
-3. Trigger `nuke-run` with `dry_run=true` (default) — verify the scan output
-4. Confirm `nuke-test-protected` appears in the **filtered** list, `nuke-test-target` appears in the **to be deleted** list
-5. Trigger `nuke-run` with `dry_run=false` to actually destroy
+### Quick reference — stack variables (nuke-run in Crucible)
 
-### Cross-account flow
+| Variable | Notes |
+| -------- | ----- |
+| `TF_VAR_dry_run` | `true` by default — set `false` only when ready to destroy |
+| `TF_VAR_nuke_role_arn` | ARN of `aws-nuke-role` in the target account |
+| `TF_VAR_management_account_id` | Account ID of your management account (blocklisted from nuke) |
+| `TF_VAR_key_pair_name` | EC2 key pair to preserve (leave empty to skip) |
 
-```text
-Crucible runner (303880639739)
-  └─ crucible-nuke-run role  (OIDC, management account)
-       └─ sts:AssumeRole ──► aws-nuke-role (767398073332)
-                                 └─ AdministratorAccess on target account
-```
-
-### Protection tag
-
-Resources tagged `crucible-nuke-protect=true` are excluded from deletion. The `prep/` stack applies this tag to `nuke-test-protected`. Add it to any other resource in the target account you want to survive a nuke.
-
-### Stack variables (nuke-run in Crucible)
-
-| Variable | Default | Notes |
-| -------- | ------- | ----- |
-| `TF_VAR_dry_run` | `true` | Set `false` only when ready to destroy |
-| `TF_VAR_nuke_role_arn` | `arn:aws:iam::767398073332:role/aws-nuke-role` | Cross-account nuke role |
-
-**Filters** — edit [nuke-run/nuke-config.yaml](nuke-run/nuke-config.yaml) to protect additional resources before running live.
+**Filters** — edit [nuke-run/nuke-config.yaml.tpl](nuke-run/nuke-config.yaml.tpl) to protect additional resources before running live.

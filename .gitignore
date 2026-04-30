@@ -9,3 +9,6 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+
+# Rendered nuke config (contains account IDs, generated at apply time)
+**/.nuke-config-rendered.yaml

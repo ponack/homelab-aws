@@ -52,14 +52,14 @@ resource-types:
 
 # Management account is permanently blocked — never nuke it.
 blocklist:
-  - "303880639739"
+  - "${management_account_id}"
 
 # Target account is a non-production sandbox — bypass the alias/prod-name check.
 bypass-alias-check-accounts:
-  - "767398073332"
+  - "${target_account_id}"
 
 accounts:
-  "767398073332":
+  "${target_account_id}":
     filters:
       # Preserve the role aws-nuke uses (self-preservation)
       IAMRole:
@@ -98,10 +98,12 @@ accounts:
         - type: regex
           property: TopicARN
           value: ".*:aws-controltower-.*"
+%{ if key_pair_name != "" ~}
 
       # Preserve personal key pairs
       EC2KeyPair:
-        - "ponack-audit"
+        - "${key_pair_name}"
+%{ endif ~}
 
       # Preserve Crucible runner roles in the target account (if any)
       # Add crucible-prep, crucible-nuke-setup here if you create them in this account:

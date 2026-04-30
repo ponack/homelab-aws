@@ -7,6 +7,49 @@ regions:
   - eu-central-1
   - global
 
+# Scan only the resource types that can realistically exist in this sandbox.
+# Without this, aws-nuke queries hundreds of legacy/unavailable services
+# (OpsWorks, MachineLearning, Timestream, Lex, etc.) causing the run to
+# time out after 60 minutes before it does any actual work.
+resource-types:
+  targets:
+    # EC2 / networking
+    - EC2Instance
+    - EC2Volume
+    - EC2VPC
+    - EC2Subnet
+    - EC2SecurityGroup
+    - EC2InternetGateway
+    - EC2RouteTable
+    - EC2NetworkInterface
+    - EC2Address
+    - EC2KeyPair
+    - EC2DHCPOption
+    - EC2NetworkACL
+    # IAM
+    - IAMRole
+    - IAMRolePolicyAttachment
+    - IAMInstanceProfile
+    - IAMPolicy
+    - IAMUser
+    - IAMGroup
+    - IAMGroupPolicyAttachment
+    # S3
+    - S3Bucket
+    - S3Object
+    # Other common sandbox resources
+    - CloudFormationStack
+    - SSMParameter
+    - CloudWatchAlarm
+    - CloudWatchLogsLogGroup
+    - SecretsManagerSecret
+    - SNSTopic
+    - SQSQueue
+    - LambdaFunction
+    - ECSCluster
+    - ECSService
+    - ECSTaskDefinition
+
 # Management account is permanently blocked — never nuke it.
 blocklist:
   - "303880639739"

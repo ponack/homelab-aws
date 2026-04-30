@@ -4,9 +4,9 @@ variable "region" {
 }
 
 variable "dry_run" {
-  type        = bool
-  description = "When true, aws-nuke scans and reports but does not delete anything. Set false to actually destroy resources."
-  default     = true
+  type        = string
+  description = "When 'true', aws-nuke scans and reports but does not delete anything. Set 'false' to actually destroy resources."
+  default     = "true"
 }
 
 variable "aws_nuke_version" {

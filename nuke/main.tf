@@ -45,11 +45,7 @@ resource "aws_iam_role_policy_attachment" "nuke_admin" {
 
 # crucible-prep is the Crucible IAP runner role for the prep stack.
 # Grant EC2 full access so it can create the nuke test VPC + instances.
-data "aws_iam_role" "crucible_prep" {
-  name = "crucible-prep"
-}
-
 resource "aws_iam_role_policy_attachment" "crucible_prep_ec2" {
-  role       = data.aws_iam_role.crucible_prep.name
+  role       = "crucible-prep"
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
 }

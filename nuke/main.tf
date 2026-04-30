@@ -21,6 +21,17 @@ provider "aws" {
   }
 }
 
+# Import existing resources created in a prior run whose state was not retained.
+import {
+  to = aws_iam_role.nuke
+  id = "aws-nuke-role"
+}
+
+import {
+  to = aws_iam_role_policy_attachment.nuke_admin
+  id = "aws-nuke-role/arn:aws:iam::aws:policy/AdministratorAccess"
+}
+
 data "aws_iam_policy_document" "nuke_assume_role" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -41,11 +52,4 @@ resource "aws_iam_role" "nuke" {
 resource "aws_iam_role_policy_attachment" "nuke_admin" {
   role       = aws_iam_role.nuke.name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
-}
-
-# crucible-prep is the Crucible IAP runner role for the prep stack.
-# Grant EC2 full access so it can create the nuke test VPC + instances.
-resource "aws_iam_role_policy_attachment" "crucible_prep_ec2" {
-  role       = "crucible-prep"
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
 }

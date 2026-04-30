@@ -11,6 +11,10 @@ regions:
 blocklist:
   - "303880639739"
 
+# Target account is a non-production sandbox — bypass the alias/prod-name check.
+bypass-alias-check-accounts:
+  - "767398073332"
+
 accounts:
   "767398073332":
     filters:

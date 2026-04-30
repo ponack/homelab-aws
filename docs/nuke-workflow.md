@@ -111,10 +111,10 @@ RDSInstance:
   - property: tag:keep
     value: "true"
 
-# Preserve all secrets with a name prefix
+# Preserve all secrets with a name prefix (use glob, not regex — more reliable in v3)
 SecretsManagerSecret:
-  - type: regex
-    value: "prod/.*"
+  - type: glob
+    value: "prod/*"
 
 # Preserve a specific S3 bucket
 S3Bucket:

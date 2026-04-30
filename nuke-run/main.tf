@@ -40,19 +40,21 @@ resource "null_resource" "aws_nuke" {
         chmod +x "$NUKE_BIN"
       fi
 
-      DRY_RUN_FLAG=""
+      # aws-nuke v3: dry-run is the default; --no-dry-run enables live deletion.
       if [ "${var.dry_run}" = "true" ]; then
-        DRY_RUN_FLAG="--dry-run"
         echo "DRY RUN — no resources will be deleted"
+        "$NUKE_BIN" run \
+          --config "${path.module}/nuke-config.yaml" \
+          --assume-role-arn "${var.nuke_role_arn}" \
+          --no-prompt
       else
         echo "LIVE RUN — resources WILL be deleted in account 303880639739"
+        "$NUKE_BIN" run \
+          --config "${path.module}/nuke-config.yaml" \
+          --assume-role-arn "${var.nuke_role_arn}" \
+          --no-prompt \
+          --no-dry-run
       fi
-
-      "$NUKE_BIN" run \
-        --config "${path.module}/nuke-config.yaml" \
-        --assume-role-arn "${var.nuke_role_arn}" \
-        --no-prompt \
-        $DRY_RUN_FLAG
     EOT
   }
 }

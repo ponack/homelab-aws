@@ -14,15 +14,15 @@ resource-types:
   targets:
     # EC2 / networking
     # EC2Volume excluded — root volumes have delete_on_termination=true so AWS
-    # cleans them up when the instance terminates. Including them causes aws-nuke
-    # to retry in-use failures for 60 minutes and hit the job timeout.
+    # cleans them up when the instance terminates.
+    # EC2NetworkInterface excluded — primary ENIs are auto-deleted when their
+    # instance terminates; including them causes in-use retry loops.
     - EC2Instance
     - EC2VPC
     - EC2Subnet
     - EC2SecurityGroup
     - EC2InternetGateway
     - EC2RouteTable
-    - EC2NetworkInterface
     - EC2Address
     - EC2KeyPair
     - EC2DHCPOption
@@ -75,11 +75,31 @@ accounts:
         - property: Bucket
           value: "homelab-tfstate"
 
-      # Preserve EC2 instances tagged to survive the nuke
+      # Preserve EC2 instances and all networking resources tagged to survive the nuke.
+      # prep/ puts the protected instance in its own VPC tagged crucible-nuke-protect=true
+      # so the protected ENI never blocks deletion of the target VPC.
       EC2Instance:
         - property: tag:crucible-nuke-protect
           value: "true"
-      EC2Volume:
+      EC2VPC:
+        - property: tag:crucible-nuke-protect
+          value: "true"
+      EC2Subnet:
+        - property: tag:crucible-nuke-protect
+          value: "true"
+      EC2SecurityGroup:
+        - property: tag:crucible-nuke-protect
+          value: "true"
+      EC2InternetGateway:
+        - property: tag:crucible-nuke-protect
+          value: "true"
+      EC2RouteTable:
+        - property: tag:crucible-nuke-protect
+          value: "true"
+      EC2DHCPOption:
+        - property: tag:crucible-nuke-protect
+          value: "true"
+      EC2NetworkACL:
         - property: tag:crucible-nuke-protect
           value: "true"
 

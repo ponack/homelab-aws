@@ -21,22 +21,72 @@ provider "aws" {
   }
 }
 
-resource "aws_vpc" "nuke_test" {
+# ── Protected VPC ─────────────────────────────────────────────────────────────
+# Tagged crucible-nuke-protect=true so aws-nuke skips all resources here.
+# The protected instance lives in this VPC and survives nuke runs.
+
+resource "aws_vpc" "protected" {
   cidr_block = "10.0.0.0/16"
-  tags       = { Name = "nuke-test-vpc" }
+  tags       = { Name = "nuke-protected-vpc", crucible-nuke-protect = "true" }
 }
 
-resource "aws_subnet" "nuke_test" {
-  vpc_id            = aws_vpc.nuke_test.id
+resource "aws_subnet" "protected" {
+  vpc_id            = aws_vpc.protected.id
   cidr_block        = "10.0.1.0/24"
   availability_zone = "${var.region}a"
-  tags              = { Name = "nuke-test-subnet" }
+  tags              = { Name = "nuke-protected-subnet", crucible-nuke-protect = "true" }
 }
 
-resource "aws_security_group" "nuke_test" {
-  name        = "nuke-test-sg"
-  description = "nuke test instances"
-  vpc_id      = aws_vpc.nuke_test.id
+resource "aws_security_group" "protected" {
+  name        = "nuke-protected-sg"
+  description = "nuke protected instance"
+  vpc_id      = aws_vpc.protected.id
+  tags        = { crucible-nuke-protect = "true" }
+}
+
+resource "aws_instance" "protected" {
+  ami                    = data.aws_ami.amazon_linux.id
+  instance_type          = "t3.micro"
+  subnet_id              = aws_subnet.protected.id
+  vpc_security_group_ids = [aws_security_group.protected.id]
+
+  tags = {
+    Name                  = "nuke-test-protected"
+    crucible-nuke-protect = "true"
+  }
+}
+
+# ── Target VPC ────────────────────────────────────────────────────────────────
+# No protect tags — everything here gets deleted on a live nuke run.
+# Separate VPC ensures the protected instance's ENI never blocks cleanup.
+
+resource "aws_vpc" "target" {
+  cidr_block = "10.1.0.0/16"
+  tags       = { Name = "nuke-target-vpc" }
+}
+
+resource "aws_subnet" "target" {
+  vpc_id            = aws_vpc.target.id
+  cidr_block        = "10.1.1.0/24"
+  availability_zone = "${var.region}a"
+  tags              = { Name = "nuke-target-subnet" }
+}
+
+resource "aws_security_group" "target" {
+  name        = "nuke-target-sg"
+  description = "nuke target instance"
+  vpc_id      = aws_vpc.target.id
+}
+
+resource "aws_instance" "target" {
+  ami                    = data.aws_ami.amazon_linux.id
+  instance_type          = "t3.micro"
+  subnet_id              = aws_subnet.target.id
+  vpc_security_group_ids = [aws_security_group.target.id]
+
+  tags = {
+    Name = "nuke-test-target"
+  }
 }
 
 data "aws_ami" "amazon_linux" {
@@ -56,30 +106,5 @@ data "aws_ami" "amazon_linux" {
   filter {
     name   = "state"
     values = ["available"]
-  }
-}
-
-# This instance is tagged to survive a nuke run
-resource "aws_instance" "protected" {
-  ami                    = data.aws_ami.amazon_linux.id
-  instance_type          = "t3.micro"
-  subnet_id              = aws_subnet.nuke_test.id
-  vpc_security_group_ids = [aws_security_group.nuke_test.id]
-
-  tags = {
-    Name                  = "nuke-test-protected"
-    crucible-nuke-protect = "true"
-  }
-}
-
-# This instance has no protect tag and will be deleted on a live nuke run
-resource "aws_instance" "target" {
-  ami                    = data.aws_ami.amazon_linux.id
-  instance_type          = "t3.micro"
-  subnet_id              = aws_subnet.nuke_test.id
-  vpc_security_group_ids = [aws_security_group.nuke_test.id]
-
-  tags = {
-    Name = "nuke-test-target"
   }
 }

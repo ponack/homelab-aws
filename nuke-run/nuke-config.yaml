@@ -7,8 +7,9 @@ regions:
   - eu-central-1
   - global
 
-# Safety net — no other account can ever match this run
-blocklist: []
+# Management account is permanently blocked — never nuke it.
+blocklist:
+  - "303880639739"
 
 accounts:
   "767398073332":

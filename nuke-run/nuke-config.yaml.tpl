@@ -13,8 +13,10 @@ regions:
 resource-types:
   targets:
     # EC2 / networking
+    # EC2Volume excluded — root volumes have delete_on_termination=true so AWS
+    # cleans them up when the instance terminates. Including them causes aws-nuke
+    # to retry in-use failures for 60 minutes and hit the job timeout.
     - EC2Instance
-    - EC2Volume
     - EC2VPC
     - EC2Subnet
     - EC2SecurityGroup

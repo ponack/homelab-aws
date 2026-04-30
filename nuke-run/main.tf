@@ -46,12 +46,14 @@ resource "null_resource" "aws_nuke" {
         "$NUKE_BIN" run \
           --config "${path.module}/nuke-config.yaml" \
           --assume-role-arn "${var.nuke_role_arn}" \
+          --no-alias-check \
           --no-prompt
       else
         echo "LIVE RUN — resources WILL be deleted in account 303880639739"
         "$NUKE_BIN" run \
           --config "${path.module}/nuke-config.yaml" \
           --assume-role-arn "${var.nuke_role_arn}" \
+          --no-alias-check \
           --no-prompt \
           --no-dry-run
       fi

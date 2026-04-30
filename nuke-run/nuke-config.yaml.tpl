@@ -1,10 +1,9 @@
+# Only scan regions where resources are actually deployed.
+# Add regions here if your stacks deploy elsewhere.
+# global covers IAM, S3 (bucket list), Route53, and other non-regional resources.
 regions:
   - us-east-1
   - us-east-2
-  - us-west-1
-  - us-west-2
-  - eu-west-1
-  - eu-central-1
   - global
 
 # Scan only the resource types that can realistically exist in this sandbox.

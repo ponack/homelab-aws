@@ -6,7 +6,7 @@ AWS homelab infrastructure managed with OpenTofu via [Crucible IAP](https://gith
 
 | Account | Role |
 | ------- | ---- |
-| Management | Runs Crucible IAP and the nuke-run runner |
+| Management | Runs Crucible IAP and the aws-nuke-run runner |
 | Target | All resources; receives aws-nuke |
 
 ## Stacks
@@ -16,18 +16,18 @@ AWS homelab infrastructure managed with OpenTofu via [Crucible IAP](https://gith
 | `networking/` | target | VPC, subnets, security groups, NAT gateway | — |
 | `compute/` | target | EKS cluster, node groups, IAM roles | `networking` |
 | `applications/` | target | Helm releases, ingress, cert-manager | `compute` |
-| `nuke/` | target | Creates `aws-nuke-role` IAM role (apply once, then lock) | — |
-| `prep/` | target | Two test EC2s — one protected, one to be nuked | — |
-| `nuke-run/` | management | Runs aws-nuke against the target account — **destructive** | `nuke` |
+| `aws-nuke-env-prep/` | target | Creates `aws-nuke-role` IAM role (apply once, then lock) | — |
+| `build-infrastructure/` | target | Two test EC2s — one protected, one to be nuked | — |
+| `aws-nuke-run/` | management | Runs aws-nuke against the target account — **destructive** | `aws-nuke-env-prep` |
 
 ## Dependency Graph
 
 ```text
 networking ──► compute ──► applications
 
-nuke (locked after first apply)
+aws-nuke-env-prep (locked after first apply)
 
-prep ──► nuke-run
+build-infrastructure ──► aws-nuke-run
 ```
 
 Crucible IAP automatically triggers downstream stacks after a successful apply upstream.
@@ -41,7 +41,7 @@ the downstream relationships via the Dependencies tab on each stack.
 
 See the full guide: [docs/nuke-workflow.md](docs/nuke-workflow.md)
 
-### Quick reference — stack variables (nuke-run in Crucible)
+### Quick reference — stack variables (aws-nuke-run in Crucible)
 
 | Variable | Notes |
 | -------- | ----- |
@@ -50,4 +50,4 @@ See the full guide: [docs/nuke-workflow.md](docs/nuke-workflow.md)
 | `TF_VAR_management_account_id` | Account ID of your management account (blocklisted from nuke) |
 | `TF_VAR_key_pair_name` | EC2 key pair to preserve (leave empty to skip) |
 
-**Filters** — edit [nuke-run/nuke-config.yaml.tpl](nuke-run/nuke-config.yaml.tpl) to protect additional resources before running live.
+**Filters** — edit [aws-nuke-run/nuke-config.yaml.tpl](aws-nuke-run/nuke-config.yaml.tpl) to protect additional resources before running live.

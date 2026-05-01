@@ -1,20 +1,20 @@
 # AWS Account Nuke Workflow with Crucible IAP
 
-This guide walks through using [aws-nuke](https://github.com/ekristen/aws-nuke) to clean a sandbox AWS account as part of a Crucible IAP demo or test reset cycle. The approach uses three Crucible stacks — `nuke`, `prep`, and `nuke-run` — wired together with Crucible's dependency system so the reset loop is a single trigger.
+This guide walks through using [aws-nuke](https://github.com/ekristen/aws-nuke) to clean a sandbox AWS account as part of a Crucible IAP demo or test reset cycle. The approach uses three Crucible stacks — `aws-nuke-env-prep`, `build-infrastructure`, and `aws-nuke-run` — wired together with Crucible's dependency system so the reset loop is a single trigger.
 
 ## Overview
 
 ```text
-nuke (one-time setup, locked)
+aws-nuke-env-prep (one-time setup, locked)
 
-prep ──► nuke-run
+build-infrastructure ──► aws-nuke-run
 ```
 
 | Stack | What it does |
 | ----- | ------------ |
-| `nuke/` | Creates `aws-nuke-role` in the target account with `AdministratorAccess`. Apply once, then lock the stack in Crucible. |
-| `prep/` | Creates a VPC and two EC2 instances — one tagged to survive the nuke, one to be deleted. |
-| `nuke-run/` | Downloads aws-nuke and runs it against the target account. Downstream of `prep`. |
+| `aws-nuke-env-prep/` | Creates `aws-nuke-role` in the target account with `AdministratorAccess`. Apply once, then lock the stack in Crucible. |
+| `build-infrastructure/` | Creates a VPC and two EC2 instances — one tagged to survive the nuke, one to be deleted. |
+| `aws-nuke-run/` | Downloads aws-nuke and runs it against the target account. Downstream of `build-infrastructure`. |
 
 ## Prerequisites
 
@@ -31,11 +31,11 @@ Crucible runner (management account)
                                  └─ AdministratorAccess on target account
 ```
 
-The `nuke/` stack creates `aws-nuke-role` in the target account and configures its trust policy to allow assumption from your management account role. Run it once from a principal that has `iam:CreateRole` and `iam:AttachRolePolicy` in the target account.
+The `aws-nuke-env-prep/` stack creates `aws-nuke-role` in the target account and configures its trust policy to allow assumption from your management account role. Run it once from a principal that has `iam:CreateRole` and `iam:AttachRolePolicy` in the target account.
 
-## Step 1 — Apply `nuke/` (once)
+## Step 1 — Apply `aws-nuke-env-prep/` (once)
 
-Create the Crucible stack pointing at `nuke/` in this repo, running **in the target account**.
+Create the Crucible stack pointing at `aws-nuke-env-prep/` in this repo, running **in the target account**.
 
 Set these stack variables:
 
@@ -46,9 +46,9 @@ Set these stack variables:
 
 After the apply succeeds, **lock the stack** in Crucible (Settings → Lock stack). The role only needs to exist — you don't want it re-applied or destroyed accidentally.
 
-## Step 2 — Apply `prep/`
+## Step 2 — Apply `build-infrastructure/`
 
-Create the Crucible stack pointing at `prep/`. This creates:
+Create the Crucible stack pointing at `build-infrastructure/`. This creates:
 
 - A VPC and subnet in `us-east-1`
 - `nuke-test-protected` — EC2 instance tagged `crucible-nuke-protect=true` (survives the nuke)
@@ -56,24 +56,24 @@ Create the Crucible stack pointing at `prep/`. This creates:
 
 No variables needed beyond the defaults.
 
-## Step 3 — Configure `nuke-run/`
+## Step 3 — Configure `aws-nuke-run/`
 
-Create the Crucible stack pointing at `nuke-run/`, running **in the management account**.
+Create the Crucible stack pointing at `aws-nuke-run/`, running **in the management account**.
 
 Set these stack variables in Crucible (Environment Variables tab):
 
 | Variable | Example value | Notes |
 | -------- | ------------- | ----- |
-| `TF_VAR_nuke_role_arn` | `arn:aws:iam::<target-account-id>:role/aws-nuke-role` | Created by the `nuke/` stack |
+| `TF_VAR_nuke_role_arn` | `arn:aws:iam::<target-account-id>:role/aws-nuke-role` | Created by the `aws-nuke-env-prep/` stack |
 | `TF_VAR_management_account_id` | `<management-account-id>` | Permanently blocklisted — can never be nuked |
 | `TF_VAR_dry_run` | `true` | Keep true until you've verified the dry-run output |
 | `TF_VAR_key_pair_name` | `my-key-pair` | Any key pair to preserve (leave empty to skip) |
 
-Set the **dependency**: go to the Dependencies tab on `nuke-run` and add `prep` as an upstream stack.
+Set the **dependency**: go to the Dependencies tab on `aws-nuke-run` and add `build-infrastructure` as an upstream stack.
 
 ## Step 4 — Dry run
 
-Trigger `nuke-run` with `dry_run=true` (the default). The run output will list every resource that **would** be deleted.
+Trigger `aws-nuke-run` with `dry_run=true` (the default). The run output will list every resource that **would** be deleted.
 
 Things to verify in the output:
 
@@ -83,25 +83,25 @@ Things to verify in the output:
 - Your state bucket shows `filtered by config` ✓
 - `aws-nuke-role` shows `filtered by config` ✓
 
-If anything unexpected appears in the `would remove` list, add a filter for it in [nuke-config.yaml.tpl](../nuke-run/nuke-config.yaml.tpl) before proceeding.
+If anything unexpected appears in the `would remove` list, add a filter for it in [aws-nuke-run/nuke-config.yaml.tpl](../aws-nuke-run/nuke-config.yaml.tpl) before proceeding.
 
 ## Step 5 — Live run
 
-Change `TF_VAR_dry_run` to `false` in Crucible, then trigger `nuke-run`.
+Change `TF_VAR_dry_run` to `false` in Crucible, then trigger `aws-nuke-run`.
 
-aws-nuke will delete everything in the target account that isn't filtered, then Crucible's downstream trigger automatically re-runs `prep` — so the test resources are recreated and the account is ready for the next demo cycle without any manual steps.
+aws-nuke will delete everything in the target account that isn't filtered, then Crucible's downstream trigger automatically re-runs `build-infrastructure` — so the test resources are recreated and the account is ready for the next demo cycle without any manual steps.
 
 ## Reset loop
 
 Once the initial setup is done, the demo reset cycle is:
 
-1. Trigger `nuke-run` (with `dry_run=false`)
-2. Wait — `nuke-run` cleans the account, then `prep` auto-runs and re-provisions the test resources
+1. Trigger `aws-nuke-run` (with `dry_run=false`)
+2. Wait — `aws-nuke-run` cleans the account, then `build-infrastructure` auto-runs and re-provisions the test resources
 3. Demo is ready again
 
 ## Customising what gets preserved
 
-Edit [nuke-run/nuke-config.yaml.tpl](../nuke-run/nuke-config.yaml.tpl). The filter section under `accounts` supports exact name matches, regex patterns, and property/tag matching.
+Edit [aws-nuke-run/nuke-config.yaml.tpl](../aws-nuke-run/nuke-config.yaml.tpl). The filter section under `accounts` supports exact name matches, regex patterns, and property/tag matching.
 
 Common additions:
 
@@ -124,12 +124,12 @@ S3Object:
     value: "my-important-bucket"
 ```
 
-After editing the template, commit the change and re-run `nuke-run` with `dry_run=true` to verify before going live.
+After editing the template, commit the change and re-run `aws-nuke-run` with `dry_run=true` to verify before going live.
 
 ## Why resource-types targets?
 
 Without a `resource-types: targets:` list, aws-nuke scans every AWS service across all configured regions — including hundreds of legacy/deprecated services (OpsWorks, MachineLearning, Timestream, Lex, FMS, CloudSearch) that return 403 or 503 errors. Across six regions this routinely exceeds a 60-minute job timeout before any actual deletion happens.
 
-The targets list in `nuke-config.yaml.tpl` limits scanning to the resource types that can realistically exist in a sandbox account, bringing scan time from >60 minutes to under a minute.
+The targets list in `aws-nuke-run/nuke-config.yaml.tpl` limits scanning to the resource types that can realistically exist in a sandbox account, bringing scan time from >60 minutes to under a minute.
 
 If you add new resource types to your sandbox (e.g. RDS, EKS), add the corresponding type to the targets list so aws-nuke will scan and clean them.

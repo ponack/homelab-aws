@@ -85,6 +85,8 @@ accounts:
           value: "AWSControlTowerExecution -> *"
         - type: glob
           value: "crucible-nuke-setup -> *"
+        - type: glob
+          value: "crucible-runner -> *"
 
       # Preserve OpenTofu state bucket and its contents
       S3Bucket:

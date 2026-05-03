@@ -136,6 +136,42 @@ resource "aws_iam_role_policy_attachment" "crucible_runner_admin" {
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
 
+# ── aws-nuke execution role ────────────────────────────────────────────────────
+# aws-nuke assumes this role to enumerate and delete resources.
+# crucible-runner must be trusted here — it's the identity that runs the nuke job.
+# Tagged crucible-nuke-protect=true so it survives nuke runs.
+
+data "aws_iam_policy_document" "aws_nuke_assume" {
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "AWS"
+      identifiers = [aws_iam_role.crucible_runner.arn]
+    }
+  }
+}
+
+import {
+  to = aws_iam_role.aws_nuke
+  id = "aws-nuke-role"
+}
+
+resource "aws_iam_role" "aws_nuke" {
+  name               = "aws-nuke-role"
+  assume_role_policy = data.aws_iam_policy_document.aws_nuke_assume.json
+  tags               = { Name = "aws-nuke-role", crucible-nuke-protect = "true" }
+}
+
+import {
+  to = aws_iam_role_policy_attachment.aws_nuke_admin
+  id = "aws-nuke-role/arn:aws:iam::aws:policy/AdministratorAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "aws_nuke_admin" {
+  role       = aws_iam_role.aws_nuke.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}
+
 data "aws_ami" "amazon_linux" {
   most_recent = true
   owners      = ["amazon"]

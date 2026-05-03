@@ -72,7 +72,7 @@ accounts:
         - "aws-nuke-role"
         - "AWSControlTowerExecution"
         - "crucible-nuke-setup"
-        - "crucible-prep"
+        - "crucible-runner"
         - type: glob
           value: "aws-controltower-*"
         - type: glob

@@ -95,7 +95,7 @@ resource "aws_instance" "target" {
 
 data "aws_caller_identity" "current" {}
 
-data "aws_iam_policy_document" "crucible_prep_assume" {
+data "aws_iam_policy_document" "crucible_runner_assume" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
     principals {
@@ -108,21 +108,31 @@ data "aws_iam_policy_document" "crucible_prep_assume" {
       values   = ["sts.amazonaws.com"]
     }
     condition {
-      test     = "StringEquals"
+      test     = "StringLike"
       variable = "crucible.forgedinfeatherstechnology.com:sub"
-      values   = ["stack:${var.crucible_stack_slug}"]
+      values   = ["stack:*"]
     }
   }
 }
 
-resource "aws_iam_role" "crucible_prep" {
-  name               = "crucible-prep"
-  assume_role_policy = data.aws_iam_policy_document.crucible_prep_assume.json
-  tags               = { Name = "crucible-prep", crucible-nuke-protect = "true" }
+import {
+  to = aws_iam_role.crucible_runner
+  id = "crucible-runner"
 }
 
-resource "aws_iam_role_policy_attachment" "crucible_prep_admin" {
-  role       = aws_iam_role.crucible_prep.name
+resource "aws_iam_role" "crucible_runner" {
+  name               = "crucible-runner"
+  assume_role_policy = data.aws_iam_policy_document.crucible_runner_assume.json
+  tags               = { Name = "crucible-runner", crucible-nuke-protect = "true" }
+}
+
+import {
+  to = aws_iam_role_policy_attachment.crucible_runner_admin
+  id = "crucible-runner/arn:aws:iam::aws:policy/AdministratorAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "crucible_runner_admin" {
+  role       = aws_iam_role.crucible_runner.name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
 

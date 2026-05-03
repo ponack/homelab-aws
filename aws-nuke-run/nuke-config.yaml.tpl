@@ -17,16 +17,19 @@ resource-types:
     # cleans them up when the instance terminates.
     # EC2NetworkInterface excluded — primary ENIs are auto-deleted when their
     # instance terminates; including them causes in-use retry loops.
+    # EC2RouteTable excluded — main route tables cannot be deleted independently;
+    # they are removed automatically when their VPC is deleted. Including them
+    # causes infinite retry loops on every nuke run.
+    # EC2NetworkACL excluded — default NACLs cannot be deleted and generate
+    # spurious retry loops; non-default NACLs are removed when their VPC is deleted.
     - EC2Instance
     - EC2VPC
     - EC2Subnet
     - EC2SecurityGroup
     - EC2InternetGateway
-    - EC2RouteTable
     - EC2Address
     - EC2KeyPair
     - EC2DHCPOption
-    - EC2NetworkACL
     # IAM
     - IAMRole
     - IAMRolePolicyAttachment
@@ -150,8 +153,12 @@ accounts:
         - "${key_pair_name}"
 %{ endif ~}
 
+      # Preserve the bootstrap IAM user used for the initial Crucible OIDC setup.
+      # Delete manually once OIDC is confirmed working; keep filtered here so a
+      # nuke run before cleanup doesn't get stuck retrying its access keys.
+      IAMUser:
+        - "crucible-temp"
+
       # Preserve Crucible runner roles in the target account (if any)
-      # Add crucible-prep, crucible-nuke-setup here if you create them in this account:
-      # IAMRole:
-      #   - "crucible-nuke-setup"
-      #   - "crucible-prep"
+      IAMRole:
+        - "crucible-prep"

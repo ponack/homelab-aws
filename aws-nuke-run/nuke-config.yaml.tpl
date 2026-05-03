@@ -111,6 +111,8 @@ accounts:
       EC2SecurityGroup:
         - property: tag:crucible-nuke-protect
           value: "true"
+        - property: Name
+          value: "default"
       EC2InternetGateway:
         - property: tag:crucible-nuke-protect
           value: "true"

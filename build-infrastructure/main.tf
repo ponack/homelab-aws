@@ -89,6 +89,43 @@ resource "aws_instance" "target" {
   }
 }
 
+# ── Crucible IAP OIDC runner role ─────────────────────────────────────────────
+# Allows the Crucible runner to assume this role via OIDC workload identity.
+# Tagged crucible-nuke-protect=true so aws-nuke never deletes it.
+
+data "aws_caller_identity" "current" {}
+
+data "aws_iam_policy_document" "crucible_prep_assume" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    principals {
+      type        = "Federated"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/crucible.forgedinfeatherstechnology.com"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "crucible.forgedinfeatherstechnology.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "crucible.forgedinfeatherstechnology.com:sub"
+      values   = ["stack:${var.crucible_stack_slug}"]
+    }
+  }
+}
+
+resource "aws_iam_role" "crucible_prep" {
+  name               = "crucible-prep"
+  assume_role_policy = data.aws_iam_policy_document.crucible_prep_assume.json
+  tags               = { Name = "crucible-prep", crucible-nuke-protect = "true" }
+}
+
+resource "aws_iam_role_policy_attachment" "crucible_prep_admin" {
+  role       = aws_iam_role.crucible_prep.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}
+
 data "aws_ami" "amazon_linux" {
   most_recent = true
   owners      = ["amazon"]

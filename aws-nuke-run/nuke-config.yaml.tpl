@@ -72,6 +72,7 @@ accounts:
         - "aws-nuke-role"
         - "AWSControlTowerExecution"
         - "crucible-nuke-setup"
+        - "crucible-prep"
         - type: glob
           value: "aws-controltower-*"
         - type: glob
@@ -161,6 +162,3 @@ accounts:
       IAMUser:
         - "crucible-temp"
 
-      # Preserve Crucible runner roles in the target account (if any)
-      IAMRole:
-        - "crucible-prep"
